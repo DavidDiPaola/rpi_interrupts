@@ -106,8 +106,8 @@ void c_irq_handler ( void )
         //if so, handle it
         timer_handler();
     }
-    //else if(AUX_IRQ & (1<<MU_IRQEN)) //if the mini uart has gone off
-    else if((INTERRUPT_IRQPEND & (1<<IRQAUX)) && (AUX_IRQ & (1<<MU_IRQEN))) //if the mini uart has gone off
+    else if(AUX_IRQ & (1<<MU_IRQEN)) //if the mini uart has gone off
+    //else if((INTERRUPT_IRQPEND & (1<<IRQAUX)) && (AUX_IRQ & (1<<MU_IRQEN))) //if the mini uart has gone off
     {
         //if so, handle it
         uart_handler();
@@ -145,12 +145,16 @@ void iuartPrint(char *s)
         i++;
     }
 
+    //initialize the index
+    uart_idx = 0;
+
     //leave the uart
     uart_busy = 0;
     //start the transmission
     AUX_MU_IO_REG = uart_buffer[0];
+    //uartPutln(uart_buffer);
 }
-void iuartPrintln(char *s)
+void iuartPutln(char *s)
 {
     iuartPrint(s);
     iuartPrint("\r\n");
@@ -169,15 +173,26 @@ int notmain ( void )
     //systimer_init(0x00080000);
     systimer_init(1000000);
     uartInit();
-    uartPutln("Booted!");
+    //uartPutln("Booted!");
 
     //mini uart irq setup
     uart_buffer[0] = '\0';
-    uart_idx = 0;
     uart_busy = 0;
-    //AUX_MU_IER_REG |= (1<<ETBEI); //interrupt when transmit FIFO is empty
+    AUX_MU_IER_REG |= (1<<ETBEI); //interrupt when transmit FIFO is empty
+    //enable the interrupt for AUX devices
+    //INTERRUPT_ENABLEIRQ |= (1<<IRQAUX);
+
+    //test the UART's interrupt bit
+    GPIOSET(16); //led off
+    AUX_MU_IO_REG = '?'; //send a character
+    while((AUX_IRQ & (1<<MU_IRQEN)) == 0){} //wait for the mini uart bit to be set
+    GPIOCLR(16); //led on
+    for(;;){} //chill
 
     enable_irq();
+
+    iuartPutln("Booted!");
+
     while(1)
     {
         while(irq_counter==ra) continue;
