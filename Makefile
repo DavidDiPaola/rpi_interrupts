@@ -20,14 +20,17 @@ clean :
 vectors.o : vectors.s
 	$(ARMGNU)-as vectors.s -o vectors.o
 
+systimer.o : systimer.c
+	$(ARMGNU)-gcc $(COPS) -c systimer.c -o systimer.o
+
 miniuart.o : miniuart.c
 	$(ARMGNU)-gcc $(COPS) -c miniuart.c -o miniuart.o
 
 blinker07.o : blinker07.c
 	$(ARMGNU)-gcc $(COPS) -c blinker07.c -o blinker07.o
 
-blinker07.elf : memmap vectors.o blinker07.o miniuart.o
-	$(ARMGNU)-ld vectors.o blinker07.o miniuart.o -T memmap -o blinker07.elf
+blinker07.elf : memmap vectors.o blinker07.o miniuart.o systimer.o
+	$(ARMGNU)-ld vectors.o blinker07.o miniuart.o systimer.o -T memmap -o blinker07.elf
 	$(ARMGNU)-objdump -D blinker07.elf > blinker07.list
 
 blinker07.bin : blinker07.elf

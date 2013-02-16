@@ -1,6 +1,7 @@
 #include "miniuart.h"
 #include "io.h"
 #include "gpio.h"
+#include "interrupt.h" //DEUBG?
 
 void uartInit (void)
 {
@@ -73,4 +74,141 @@ void uartPutln( char *s )
 {
     uartPuts(s);
     uartPuts("\n");
+}
+
+//DEBUG=============================================================================
+void uartPut4(unsigned int n){
+    n &= 0xF;
+
+    switch(n){
+        case 0x0:
+            uartPutc('0');
+            break;
+        case 0x1:
+            uartPutc('1');
+            break;
+        case 0x2:
+            uartPutc('2');
+            break;
+        case 0x3:
+            uartPutc('3');
+            break;
+        case 0x4:
+            uartPutc('4');
+            break;
+        case 0x5:
+            uartPutc('5');
+            break;
+        case 0x6:
+            uartPutc('6');
+            break;
+        case 0x7:
+            uartPutc('7');
+            break;
+        case 0x8:
+            uartPutc('8');
+            break;
+        case 0x9:
+            uartPutc('9');
+            break;
+        case 0xA:
+            uartPutc('A');
+            break;
+        case 0xB:
+            uartPutc('B');
+            break;
+        case 0xC:
+            uartPutc('C');
+            break;
+        case 0xD:
+            uartPutc('D');
+            break;
+        case 0xE:
+            uartPutc('E');
+            break;
+        case 0xF:
+            uartPutc('F');
+            break;
+    }
+}
+void uartPut32(unsigned int q){
+    int i;
+
+    uartPuts("0x");
+    for(i=0; i<8; i++){
+        uartPut4(q >> ((7-i)*4));
+    }
+    uartPuts("\n");
+}
+
+#define UART_MAXLEN 64
+static volatile char uart_buffer[UART_MAXLEN];
+static volatile int  uart_idx;
+static volatile int  uart_busy;
+//static volatile int  uart_done;
+
+void uart_handler ( void )
+{
+    //if nothing is modifying the buffer or index
+    if(!uart_busy){
+        //if we can...
+        if((uart_idx < UART_MAXLEN) && (uart_buffer[uart_idx] != '\0'))
+        {
+            //uart_done = 0;
+            //send another character
+            AUX_MU_IO_REG = uart_buffer[uart_idx];
+            uart_idx++;
+        }
+        else
+        {
+            uart_buffer[0] = '\0';
+            uart_idx = 0;
+            //uart_done = 1;
+        }
+    }
+}
+
+void iuartInit( void ){
+    uart_buffer[0] = '\0';
+    uart_busy = 1;
+    //uart_done = 1;
+    AUX_MU_IER_REG |= (1<<ETBEI); //interrupt when transmit FIFO is empty
+    INTERRUPT_ENABLEIRQ1 |= (1<<IRQAUX); //enable the interrupt for AUX devices
+}
+
+void iuartPuts(char *s)
+{
+    int i = 0;
+
+    //wait until transmission is over
+    //while(!uart_done){}
+    while(uart_buffer[0] != '\0'){}
+    //take the uart
+    uart_busy = 1;
+
+    //copy the string
+    while((i < UART_MAXLEN) && (s[i] != '\0'))
+    {
+        uart_buffer[i] = s[i];
+        i++;
+    }
+    if(i >= UART_MAXLEN){
+        i = UART_MAXLEN-1;
+    }
+    uart_buffer[i] = '\0';
+
+    //initialize the index
+    uart_idx = 0;
+
+    //leave the uart
+    uart_busy = 0;
+    //start the transmission
+    AUX_MU_IO_REG = uart_buffer[0];
+    //uartPutln(uart_buffer);
+}
+
+void iuartPutln(char *s)
+{
+    iuartPuts(s);
+    iuartPuts("\r\n");
 }

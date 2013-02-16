@@ -6,9 +6,9 @@
 //Auxiliary peripherals registers (see pg8 of the BCM2835 datasheet) (some are verified)
 #define AUX_BASE_ADDR 0x20215000
 #define AUX_IRQ     __IO(AUX_BASE_ADDR+0x00)
-#define SPI1_IRQEN 2
-#define SPI0_IRQEN 1
-#define MU_IRQEN   0
+#define SPI1_IRQPEND 2
+#define SPI0_IRQPEND 1
+#define MU_IRQPEND   0
 #define AUX_ENABLES __IO(AUX_BASE_ADDR+0x04)
 #define SPI1_EN 2
 #define SPI0_EN 1
@@ -24,6 +24,7 @@
 #define FIFOEN0  6
 #define IID1     2 //when reading
 #define IID0     1 //when reading
+#define IID_MASK 0b11
 #define FIFOCLR1 2 //when writing
 #define FIFOCLR0 1 //when writing
 #define IRQPEND  0
@@ -77,5 +78,18 @@ void uartPutc( char ch );
 void uartPuts( char *s );
 
 void uartPutln( char *s );
+
+//DEBUG=============================================================================
+void uartPut4(unsigned int n);
+
+void uartPut32(unsigned int q);
+
+void uart_handler ( void );
+
+void iuartInit(void);
+
+void iuartPuts(char *s);
+
+void iuartPutln(char *s);
 
 #endif
