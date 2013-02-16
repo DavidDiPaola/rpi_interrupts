@@ -99,15 +99,18 @@ void timer_handler ( void )
 }
 void c_irq_handler ( void )
 {
+    //get a copy of the IRQ pending register so we don't have to read it multiple times
+    unsigned long long int irqs = INTERRUPT_IRQPEND;
+
     //determine the source of the interrupt
     //if(SYSTIMER_CS & (1<<M1)) //if system timer 1 has gone off
-    if(INTERRUPT_IRQPEND & (1<<IRQSYSTIMERC1)) //if system timer 1 has gone off
+    if(irqs & (1<<IRQSYSTIMERC1)) //if system timer 1 has gone off
     {
         //if so, handle it
         timer_handler();
     }
     else if(AUX_IRQ & (1<<MU_IRQEN)) //if the mini uart has gone off
-    //else if((INTERRUPT_IRQPEND & (1<<IRQAUX)) && (AUX_IRQ & (1<<MU_IRQEN))) //if the mini uart has gone off
+    //else if((irqs & (1<<IRQAUX)) && (AUX_IRQ & (1<<MU_IRQEN))) //if the mini uart has gone off
     {
         //if so, handle it
         uart_handler();
@@ -159,9 +162,72 @@ void iuartPutln(char *s)
     iuartPrint(s);
     iuartPrint("\r\n");
 }
+void uartPut4(unsigned int n){
+    n &= 0xF;
+
+    switch(n){
+        case 0x0:
+            uartPutc('0');
+            break;
+        case 0x1:
+            uartPutc('1');
+            break;
+        case 0x2:
+            uartPutc('2');
+            break;
+        case 0x3:
+            uartPutc('3');
+            break;
+        case 0x4:
+            uartPutc('4');
+            break;
+        case 0x5:
+            uartPutc('5');
+            break;
+        case 0x6:
+            uartPutc('6');
+            break;
+        case 0x7:
+            uartPutc('7');
+            break;
+        case 0x8:
+            uartPutc('8');
+            break;
+        case 0x9:
+            uartPutc('9');
+            break;
+        case 0xA:
+            uartPutc('A');
+            break;
+        case 0xB:
+            uartPutc('B');
+            break;
+        case 0xC:
+            uartPutc('C');
+            break;
+        case 0xD:
+            uartPutc('D');
+            break;
+        case 0xE:
+            uartPutc('E');
+            break;
+        case 0xF:
+            uartPutc('F');
+            break;
+    }
+}
+void uartPut32(unsigned int q){
+    int i;
+
+    uartPuts("0x");
+    for(i=0; i<8; i++){
+        uartPut4(q >> ((7-i)*4));
+    }
+    uartPuts("\n");
+}
 int notmain ( void )
 {
-    unsigned int ra;
+    unsigned int ra, rb;
 
     //make gpio pin tied to the led an output
     GPIOMODE(16, FSEL_OUTPUT); //led output
@@ -174,20 +240,37 @@ int notmain ( void )
     systimer_init(1000000);
     uartInit();
     //uartPutln("Booted!");
+    //uartPut32(0x12345678);
 
     //mini uart irq setup
     uart_buffer[0] = '\0';
     uart_busy = 0;
     AUX_MU_IER_REG |= (1<<ETBEI); //interrupt when transmit FIFO is empty
     //enable the interrupt for AUX devices
-    //INTERRUPT_ENABLEIRQ |= (1<<IRQAUX);
+    INTERRUPT_ENABLEIRQ |= (1<<IRQAUX);
 
     //test the UART's interrupt bit
     GPIOSET(16); //led off
-    AUX_MU_IO_REG = '?'; //send a character
-    while((AUX_IRQ & (1<<MU_IRQEN)) == 0){} //wait for the mini uart bit to be set
-    GPIOCLR(16); //led on
+    AUX_MU_IO_REG = '1'; //fill the transmit FIFO
+    AUX_MU_IO_REG = '2';
+    AUX_MU_IO_REG = '3';
+    AUX_MU_IO_REG = '4';
+    AUX_MU_IO_REG = '5';
+    AUX_MU_IO_REG = '6';
+    AUX_MU_IO_REG = '7';
+    AUX_MU_IO_REG = '8';
+    //while((AUX_IRQ & (1<<MU_IRQEN)) == 0){} //wait for the mini uart bit to be set
+    ra = INTERRUPT_IRQPEND; //get the lower 32bits of IRQ pending
+    while((rb = INTERRUPT_IRQPEND) == ra){} //wait for IRQ pending to change
+    uartPut32(ra); //print the old value of IRQ pending
+    uartPut32(rb); //print the new value
     for(;;){} //chill
+
+    while( //while...
+        ((INTERRUPT_IRQPEND & (1<<IRQAUX)) == 0) && //the AUX IRQ bit is not set and...
+        ((AUX_IRQ & (1<<MU_IRQEN)) == 0) //the Mini-UART IRQ bit is not set...
+    ){} //wait
+    GPIOCLR(16); //led on
 
     enable_irq();
 
