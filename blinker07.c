@@ -1,37 +1,3 @@
-// $Log: blinker07.c,v $
-// Revision 1.10  2013/02/16 01:28:26  billy
-// -initial uart support
-//
-// Revision 1.9  2013/02/16 01:14:58  billy
-// -maybe checking the IRQ PENDING 1 register is better than checking the system timer status register for determining an interrupt source...
-//
-// Revision 1.8  2013/02/16 00:23:15  billy
-// -cleaned up
-// -made the IRQ handler more generic, it finds the interrupt source and calls a handler
-//
-// Revision 1.7  2013/02/16 00:12:39  billy
-// -cleaned up some more
-// -put a definition in for the system timer enable in the interrupt defines
-//
-// Revision 1.6  2013/02/16 00:06:19  billy
-// -added IRQ register definitions
-//
-// Revision 1.5  2013/02/15 23:49:49  billy
-// -cleanup
-//
-// Revision 1.4  2013/02/15 23:48:28  billy
-// -converted to use IO macros
-//
-// Revision 1.3  2013/02/15 23:39:25  billy
-// -removed increment of the timer gaps
-//
-// Revision 1.2  2013/02/15 23:37:45  billy
-// -removed non-interrupt code
-//
-// Revision 1.1  2013/02/15 23:37:21  billy
-// Initial revision
-//
-
 //-------------------------------------------------------------------------
 //-------------------------------------------------------------------------
 
