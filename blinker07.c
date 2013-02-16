@@ -10,6 +10,7 @@
 #include "io.h"
 #include "gpio.h"
 #include "miniuart.h"
+#include "interrupt.h"
 
 #define ARMBASE 0x8000
 
@@ -29,33 +30,6 @@
 #define SYSTIMER_C1  __IO(SYSTIMER_C1_ADDR)
 #define SYSTIMER_C2  __IO(SYSTIMER_C2_ADDR) //the GPU may be using this one, steer clear
 #define SYSTIMER_C3  __IO(SYSTIMER_C3_ADDR)
-
-#define INTERRUPT_BASE_ADDR 0x2000B000
-#define INTERRUPT_BASICPEND_ADDR       (INTERRUPT_BASE_ADDR+0x200)
-#define INTERRUPT_IRQPEND1_ADDR        (INTERRUPT_BASE_ADDR+0x204)
-#define INTERRUPT_IRQPEND2_ADDR        (INTERRUPT_BASE_ADDR+0x208)
-#define INTERRUPT_FIQCONTROL_ADDR      (INTERRUPT_BASE_ADDR+0x20C)
-#define INTERRUPT_ENABLEIRQ1_ADDR      (INTERRUPT_BASE_ADDR+0x210)
-#define INTERRUPT_ENABLEIRQ2_ADDR      (INTERRUPT_BASE_ADDR+0x214)
-#define INTERRUPT_ENABLEBASICIRQ_ADDR  (INTERRUPT_BASE_ADDR+0x218)
-#define INTERRUPT_DISABLEIRQ1_ADDR     (INTERRUPT_BASE_ADDR+0x21C)
-#define INTERRUPT_DISABLEIRQ2_ADDR     (INTERRUPT_BASE_ADDR+0x220)
-#define INTERRUPT_DISABLEBASICIRQ_ADDR (INTERRUPT_BASE_ADDR+0x224)
-#define INTERRUPT_BASICPEND       __IO(INTERRUPT_BASICPEND_ADDR)
-#define INTERRUPT_IRQPEND         __IO64(INTERRUPT_IRQPEND1_ADDR)
-   #define IRQSYSTIMERC1 1
-   #define IRQSYSTIMERC3 3
-   #define IRQAUX        29
-#define INTERRUPT_IRQPEND1        __IO(INTERRUPT_IRQPEND1_ADDR)
-#define INTERRUPT_IRQPEND2        __IO(INTERRUPT_IRQPEND2_ADDR)
-#define INTERRUPT_FIQCONTROL      __IO(INTERRUPT_FIQCONTROL_ADDR)
-#define INTERRUPT_ENABLEIRQ       __IO64(INTERRUPT_ENABLEIRQ1_ADDR)
-#define INTERRUPT_ENABLEIRQ1      __IO(INTERRUPT_ENABLEIRQ1_ADDR)
-#define INTERRUPT_ENABLEIRQ2      __IO(INTERRUPT_ENABLEIRQ2_ADDR)
-#define INTERRUPT_ENABLEBASICIRQ  __IO(INTERRUPT_ENABLEBASICIRQ_ADDR)
-#define INTERRUPT_DISABLEIRQ1     __IO(INTERRUPT_DISABLEIRQ1_ADDR)
-#define INTERRUPT_DISABLEIRQ2     __IO(INTERRUPT_DISABLEIRQ2_ADDR)
-#define INTERRUPT_DISABLEBASICIRQ __IO(INTERRUPT_DISABLEBASICIRQ_ADDR)
 
 extern void enable_irq ( void );
 
@@ -107,6 +81,7 @@ void c_irq_handler ( void )
     if(irqs & (1<<IRQSYSTIMERC1)) //if system timer 1 has gone off
     {
         //if so, handle it
+        //GPIOSET(16); //led ff
         timer_handler();
     }
     else if(AUX_IRQ & (1<<MU_IRQEN)) //if the mini uart has gone off
@@ -114,7 +89,7 @@ void c_irq_handler ( void )
     {
         //if so, handle it
         //uart_handler();
-        GPIOCLR(16); //led on
+        //GPIOCLR(16); //led on
     }
 }
 //------------------------------------------------------------------------
@@ -130,7 +105,7 @@ void systimer_init ( unsigned int ivl )
     //clear any interrupts
     SYSTIMER_CS |= (1<<M1);
     //enable the interrupt for the timer
-    //INTERRUPT_ENABLEIRQ |= (1<<IRQSYSTIMERC1);
+    INTERRUPT_ENABLEIRQ |= (1<<IRQSYSTIMERC1);
 }
 //------------------------------------------------------------------------
 void iuartPrint(char *s)
@@ -246,13 +221,12 @@ int notmain ( void )
     //mini uart irq setup
     uart_buffer[0] = '\0';
     uart_busy = 0;
-    AUX_MU_IER_REG |= (1<<ETBEI); //interrupt when transmit FIFO is empty
-    //enable the interrupt for AUX devices
-    INTERRUPT_ENABLEIRQ |= (1<<IRQAUX);
+    //AUX_MU_IER_REG |= (1<<1); //interrupt when transmit FIFO is empty
+    //INTERRUPT_ENABLEIRQ |= (1<<IRQAUX); //enable the interrupt for AUX devices
 
     //test the UART's interrupt bit
-    GPIOSET(16); //led off
     /*
+    GPIOSET(16); //led off
     AUX_MU_IO_REG = '1'; //fill the transmit FIFO
     AUX_MU_IO_REG = '2';
     AUX_MU_IO_REG = '3';
@@ -278,7 +252,18 @@ int notmain ( void )
     //test the UART with an interrupt
     GPIOSET(16); //led off
     enable_irq();
-    iuartPutln("Booted!");
+    /*
+    AUX_MU_IO_REG = '1'; //fill the transmit FIFO
+    AUX_MU_IO_REG = '2';
+    AUX_MU_IO_REG = '3';
+    AUX_MU_IO_REG = '4';
+    AUX_MU_IO_REG = '5';
+    AUX_MU_IO_REG = '6';
+    AUX_MU_IO_REG = '7';
+    AUX_MU_IO_REG = '8';
+    */
+    //iuartPutln("Booted!");
+    //for(;;){} //only do interrupts
 
     while(1)
     {
