@@ -113,7 +113,8 @@ void c_irq_handler ( void )
     //else if((irqs & (1<<IRQAUX)) && (AUX_IRQ & (1<<MU_IRQEN))) //if the mini uart has gone off
     {
         //if so, handle it
-        uart_handler();
+        //uart_handler();
+        GPIOCLR(16); //led on
     }
 }
 //------------------------------------------------------------------------
@@ -129,7 +130,7 @@ void systimer_init ( unsigned int ivl )
     //clear any interrupts
     SYSTIMER_CS |= (1<<M1);
     //enable the interrupt for the timer
-    INTERRUPT_ENABLEIRQ |= (1<<IRQSYSTIMERC1);
+    //INTERRUPT_ENABLEIRQ |= (1<<IRQSYSTIMERC1);
 }
 //------------------------------------------------------------------------
 void iuartPrint(char *s)
@@ -251,6 +252,7 @@ int notmain ( void )
 
     //test the UART's interrupt bit
     GPIOSET(16); //led off
+    /*
     AUX_MU_IO_REG = '1'; //fill the transmit FIFO
     AUX_MU_IO_REG = '2';
     AUX_MU_IO_REG = '3';
@@ -271,9 +273,11 @@ int notmain ( void )
         ((AUX_IRQ & (1<<MU_IRQEN)) == 0) //the Mini-UART IRQ bit is not set...
     ){} //wait
     GPIOCLR(16); //led on
+    */
 
+    //test the UART with an interrupt
+    GPIOSET(16); //led off
     enable_irq();
-
     iuartPutln("Booted!");
 
     while(1)
