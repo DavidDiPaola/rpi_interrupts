@@ -20,6 +20,7 @@
 #define I_OFF() AUX_MU_IER_REG &= ~(1<<1)
 
 extern void enable_irq ( void );
+extern void disable_irq ( void );
 
 void led_toggle(void){
     if(GPIOREAD(16)){
@@ -29,27 +30,30 @@ void led_toggle(void){
     }
 }
 
-static volatile int count;
+unsigned long long int irq1s;
+unsigned long long int irq2s;
 
 void c_irq_handler ( void )
 {
+    disable_irq();
     //get a copy of the IRQ pending register so we don't have to read it multiple times
-    unsigned long long int irq1s = INTERRUPT_IRQPEND1;
-    unsigned long long int irq2s = INTERRUPT_IRQPEND2;
+    irq1s = INTERRUPT_IRQPEND1;
+    irq2s = INTERRUPT_IRQPEND2;
 
     //determine the source of the interrupt
     if(irq1s & (1<<IRQSYSTIMERC1)) //if system timer 1 has gone off
     {
         //if so, handle it
         //GPIOSET(16); //led off
+        led_toggle(); //this should make the LED blink every N seconds
         systimer_handler();
     }
-    else if(irq2s & (1<<(IRQUART-32))) //if the pl011 uart has gone off
+    if(irq2s & (1<<(IRQUART-32))) //if the pl011 uart has gone off
     {
-        //ACK TX FIFO interrupt
-        PL011_ICR |= (1<<PL011_ICR_TXIC);
-        led_toggle(); //if the LED is dim, we're not ACKing interrupts
+        //led_toggle(); //if the LED is dim, we're not ACKing interrupts
+        uart_handler();
     }
+    enable_irq();
 }
 
 int notmain ( void )
@@ -99,6 +103,7 @@ int notmain ( void )
     */
 
     //test the UART with an interrupt
+    /*
     GPIOSET(16); //led off
     iuartInit();
     enable_irq();
@@ -111,19 +116,24 @@ int notmain ( void )
     PL011_DR = '7';
     PL011_DR = '8';
     for(;;){} //only do interrupts
-
-    //test interrupts fully
-    /*
-    GPIOSET(16); //led off
-    count = 0;
-    enable_irq();
-    PL011_DR = '?';
-    //iuartPutln("Interrupts!");
     */
 
+    //test interrupts fully
+    GPIOSET(16); //led off
+    iuartInit();
+    enable_irq();
+    //PL011_DR = '?';
+    for(;;){
+        iuartPutln("Interrupts!");
+    }
+
+    //test system timer AND UART
     /*
     while(1)
     {
+        iuartPutln("Interrupts!");
+    }*/
+    /*
         while(systimer_get() == ra) continue;
         ra = systimer_get();
 
@@ -133,8 +143,7 @@ int notmain ( void )
         ra = systimer_get();
 
         GPIOSET(16); //LED off
-    }
-    */
+    }*/
 
 
     return(0);
