@@ -34,18 +34,21 @@ static volatile int count;
 void c_irq_handler ( void )
 {
     //get a copy of the IRQ pending register so we don't have to read it multiple times
-    unsigned long long int irqs = INTERRUPT_IRQPEND;
+    unsigned long long int irq1s = INTERRUPT_IRQPEND1;
+    unsigned long long int irq2s = INTERRUPT_IRQPEND2;
 
     //determine the source of the interrupt
-    if(irqs & (1<<IRQSYSTIMERC1)) //if system timer 1 has gone off
+    if(irq1s & (1<<IRQSYSTIMERC1)) //if system timer 1 has gone off
     {
         //if so, handle it
         //GPIOSET(16); //led off
         systimer_handler();
     }
-    else if(irqs & (1<<IRQUART)) //if the pl011 uart has gone off
+    else if(irq2s & (1<<(IRQUART-32))) //if the pl011 uart has gone off
     {
-        led_toggle();
+        //ACK TX FIFO interrupt
+        PL011_ICR |= (1<<PL011_ICR_TXIC);
+        led_toggle(); //if the LED is dim, we're not ACKing interrupts
     }
 }
 
@@ -66,6 +69,7 @@ int notmain ( void )
     //uartPut32(0x12345678);
 
     //test the UART's interrupt bit
+    /*
     iuartInit();
     GPIOSET(16); //led off
     PL011_DR = '0'; //fill the transmit FIFO
@@ -84,26 +88,19 @@ int notmain ( void )
     PL011_DR = 'D';
     PL011_DR = 'E';
     PL011_DR = 'F';
-    //while((AUX_IRQ & (1<<MU_IRQEN)) == 0){} //wait for the mini uart bit to be set
     ra = INTERRUPT_IRQPEND2; //get the upper 32bits of IRQ pending
     while((rb = INTERRUPT_IRQPEND2) == ra){} //wait for IRQ pending to change
     rc = PL011_RIS; //get raw interrupt status
+    uartPutln("");
     uartPut32(ra); //print the old value of IRQ pending
     uartPut32(rb); //print the new value
     uartPut32(rc); //print the PL011 interrupt status
     for(;;){} //chill
-
-    /*
-    while( //while...
-        ((INTERRUPT_IRQPEND & (1<<IRQAUX)) == 0) && //the AUX IRQ bit is not set and...
-        ((AUX_IRQ & (1<<MU_IRQEN)) == 0) //the Mini-UART IRQ bit is not set...
-    ){} //wait
-    GPIOCLR(16); //led on
     */
 
     //test the UART with an interrupt
-    /*
     GPIOSET(16); //led off
+    iuartInit();
     enable_irq();
     PL011_DR = '1'; //fill the transmit FIFO
     PL011_DR = '2';
@@ -113,8 +110,7 @@ int notmain ( void )
     PL011_DR = '6';
     PL011_DR = '7';
     PL011_DR = '8';
-    //for(;;){} //only do interrupts
-    */
+    for(;;){} //only do interrupts
 
     //test interrupts fully
     /*
