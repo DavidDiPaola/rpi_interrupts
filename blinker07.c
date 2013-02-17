@@ -9,7 +9,7 @@
 
 #include "io.h"
 #include "gpio.h"
-#include "miniuart.h"
+#include "biguart.h"
 #include "interrupt.h"
 #include "systimer.h"
 #include "stdint.h"
@@ -51,7 +51,7 @@ void c_irq_handler ( void )
 
 int notmain ( void )
 {
-    unsigned int ra, rb;
+    unsigned int ra, rb, rc;
 
     //make gpio pin tied to the led an output
     GPIOMODE(16, FSEL_OUTPUT); //led output
@@ -65,27 +65,35 @@ int notmain ( void )
     uartPutln("Booted!");
     //uartPut32(0x12345678);
 
-    //mini uart irq setup
-    //iuartInit();
-
     //test the UART's interrupt bit
-    /*
+    iuartInit();
     GPIOSET(16); //led off
-    AUX_MU_IO_REG = '1'; //fill the transmit FIFO
-    AUX_MU_IO_REG = '2';
-    AUX_MU_IO_REG = '3';
-    AUX_MU_IO_REG = '4';
-    AUX_MU_IO_REG = '5';
-    AUX_MU_IO_REG = '6';
-    AUX_MU_IO_REG = '7';
-    AUX_MU_IO_REG = '8';
+    PL011_DR = '0'; //fill the transmit FIFO
+    PL011_DR = '1';
+    PL011_DR = '2';
+    PL011_DR = '3';
+    PL011_DR = '4';
+    PL011_DR = '5';
+    PL011_DR = '6';
+    PL011_DR = '7';
+    PL011_DR = '8'; //characters past (and including) this one aren't printed...
+    PL011_DR = '9';
+    PL011_DR = 'A';
+    PL011_DR = 'B';
+    PL011_DR = 'C';
+    PL011_DR = 'D';
+    PL011_DR = 'E';
+    PL011_DR = 'F';
     //while((AUX_IRQ & (1<<MU_IRQEN)) == 0){} //wait for the mini uart bit to be set
-    ra = INTERRUPT_IRQPEND; //get the lower 32bits of IRQ pending
-    while((rb = INTERRUPT_IRQPEND) == ra){} //wait for IRQ pending to change
+    ra = INTERRUPT_IRQPEND2; //get the upper 32bits of IRQ pending
+    while((rb = INTERRUPT_IRQPEND2) == ra){} //wait for IRQ pending to change
+    rc = PL011_RIS; //get raw interrupt status
     uartPut32(ra); //print the old value of IRQ pending
     uartPut32(rb); //print the new value
+    uartPut32(rc); //print the PL011 interrupt status
     for(;;){} //chill
 
+    /*
     while( //while...
         ((INTERRUPT_IRQPEND & (1<<IRQAUX)) == 0) && //the AUX IRQ bit is not set and...
         ((AUX_IRQ & (1<<MU_IRQEN)) == 0) //the Mini-UART IRQ bit is not set...
@@ -97,14 +105,14 @@ int notmain ( void )
     /*
     GPIOSET(16); //led off
     enable_irq();
-    AUX_MU_IO_REG = '1'; //fill the transmit FIFO
-    AUX_MU_IO_REG = '2';
-    AUX_MU_IO_REG = '3';
-    AUX_MU_IO_REG = '4';
-    AUX_MU_IO_REG = '5';
-    AUX_MU_IO_REG = '6';
-    AUX_MU_IO_REG = '7';
-    AUX_MU_IO_REG = '8';
+    PL011_DR = '1'; //fill the transmit FIFO
+    PL011_DR = '2';
+    PL011_DR = '3';
+    PL011_DR = '4';
+    PL011_DR = '5';
+    PL011_DR = '6';
+    PL011_DR = '7';
+    PL011_DR = '8';
     //for(;;){} //only do interrupts
     */
 
@@ -113,7 +121,7 @@ int notmain ( void )
     GPIOSET(16); //led off
     count = 0;
     enable_irq();
-    AUX_MU_IO_REG = '?';
+    PL011_DR = '?';
     //iuartPutln("Interrupts!");
     */
 

@@ -5,8 +5,6 @@
 
 void uartInit (void)
 {
-    unsigned int i;
-
     //set GPIO pin 14 to PL011 UART TX mode
     GPIOMODE(14, FSEL_AF0);
     //set GPIO pin 15 to PL011 UART RX mode
@@ -177,8 +175,13 @@ void iuartInit( void ){
     uart_buffer[0] = '\0';
     uart_busy = 1;
     //uart_done = 1;
-    //AUX_MU_IER_REG |= (1<<ETBEI); //interrupt when transmit FIFO is empty
-    //INTERRUPT_ENABLEIRQ1 |= (1<<IRQAUX); //enable the interrupt for AUX devices
+    //set RX FIFO interrupt when it becomes 7/8 full, TX FIFO interrupt when 1/8 full
+    PL011_IFLS = ((PL011_IFLS_RXIFLSEL_SEVENEIGHTHS<<PL011_IFLS_RXIFLSEL) |
+                  (PL011_IFLS_TXIFLSEL_EIGHTH<<PL011_IFLS_TXIFLSEL));
+    //enable FIFO interrupts
+    PL011_IMSC |= ((1<<PL011_IMSC_TXIM) | (1<<PL011_IMSC_RXIM));
+    //enable the PL011 interrupt
+    INTERRUPT_ENABLEIRQ2 |= (1<<(IRQUART-32));
 }
 
 void iuartPuts(char *s)
@@ -217,3 +220,13 @@ void iuartPutln(char *s)
     iuartPuts(s);
     iuartPuts("\r\n");
 }
+
+/*
+Copyright (c) 2012 David Welch dwelch@dwelch.com, 2013 David DiPaola
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/
