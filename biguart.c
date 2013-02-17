@@ -7,9 +7,6 @@ void uartInit (void)
 {
     unsigned int i;
 
-    PL011_CR = 0;
-
-    GPIOCLR(16);
     //set GPIO pin 14 to PL011 UART TX mode
     GPIOMODE(14, FSEL_AF0);
     //set GPIO pin 15 to PL011 UART RX mode
@@ -18,8 +15,13 @@ void uartInit (void)
     GPIOPULLOF(14);
     GPIOPULLOF(15);
 
+    //we must disable the PL011 before we configure it
+    PL011_CR = 0;
+    //wait for the UART to stop sending or receiving
+    while(PL011_FR & (1<<PL011_FR_BUSY)){}
+    //flush the transmit FIFO
+    PL011_LCRH &= ~(1<<PL011_LCRH_FEN);
     //clear any pending interrupts
-    //PL011_ICR = 0x7FF;
     PL011_ICR = ((1<<PL011_ICR_OEIC) |
                  (1<<PL011_ICR_BEIC) |
                  (1<<PL011_ICR_PEIC) |
@@ -35,10 +37,8 @@ void uartInit (void)
     PL011_IBRD = PL011_BAUD_INT(115200);
     PL011_FBRD = PL011_BAUD_FRAC(115200);
     //8bit symbols, enable FIFOs
-    //PL011_LCRH = 0x70;
     PL011_LCRH = ((PL011_LCRH_WLEN_8BIT<<PL011_LCRH_WLEN) | (1<<PL011_LCRH_FEN));
     //enable RX, TX, UART
-    //PL011_CR = 0x301;
     PL011_CR = ((1<<PL011_CR_RXE) | (1<<PL011_CR_TXE) | (1<<PL011_CR_UARTEN));
 }
 
