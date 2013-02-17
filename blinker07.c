@@ -37,30 +37,15 @@ void c_irq_handler ( void )
     unsigned long long int irqs = INTERRUPT_IRQPEND;
 
     //determine the source of the interrupt
-    //if(SYSTIMER_CS & (1<<M1)) //if system timer 1 has gone off
     if(irqs & (1<<IRQSYSTIMERC1)) //if system timer 1 has gone off
     {
         //if so, handle it
-        //GPIOSET(16); //led ff
+        //GPIOSET(16); //led off
         systimer_handler();
     }
-    else if(AUX_IRQ & (1<<MU_IRQPEND)) //if the mini uart has gone off
-    //else if((irqs & (1<<IRQAUX)) && (AUX_IRQ & (1<<MU_IRQEN))) //if the mini uart has gone off
+    else if(irqs & (1<<IRQUART)) //if the pl011 uart has gone off
     {
-        //if so, handle it
-        uint8_t ier;
-        uint8_t txc = 0;
-
         led_toggle();
-        ier = (AUX_MU_IER_REG>>IID0)&IID_MASK;
-        if(ier == 0b01){
-            //uart_handler();
-            while((txc < 8) && (count < 10)){
-                AUX_MU_IO_REG = (0x30+count);
-                count++;
-                txc++;
-            }
-        }
     }
 }
 
@@ -70,19 +55,18 @@ int notmain ( void )
 
     //make gpio pin tied to the led an output
     GPIOMODE(16, FSEL_OUTPUT); //led output
-    GPIOCLR(16); //led off
+    GPIOSET(16); //led off
 
     //rely on the interrupt to measure time.
     ra = systimer_get();
 
-    //systimer_init(0x00080000);
-    systimer_init(1000000);
+    systimer_init(1000000); //go off once a second
     uartInit();
-    //uartPutln("Booted!");
+    uartPutln("Booted!");
     //uartPut32(0x12345678);
 
     //mini uart irq setup
-    iuartInit();
+    //iuartInit();
 
     //test the UART's interrupt bit
     /*
@@ -124,11 +108,14 @@ int notmain ( void )
     //for(;;){} //only do interrupts
     */
 
+    //test interrupts fully
+    /*
     GPIOSET(16); //led off
     count = 0;
     enable_irq();
-    //AUX_MU_IO_REG = '?';
+    AUX_MU_IO_REG = '?';
     //iuartPutln("Interrupts!");
+    */
 
     /*
     while(1)

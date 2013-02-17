@@ -150,24 +150,27 @@
 //read the level of GPIO pin x
 #define GPIOREAD(x)    __GPRB(GPLEV_ADDR, (x))
 //turn on a pull-up on GPIO pin x (see pg101 of the BCM2835 datasheet) (not completely verified)
+//requires c99 compilation
 #define GPIOPULLUP(x) GPPUD |= (1<<PUDUP); \
-                      for(i=0; i<150; i++){} \
+                      for(int i=0; i<150; i++){__asm__("nop");} \
                       __GPSB(GPPUDCLK_ADDR, (x)); \
-                      for(i=0; i<150; i++){} \
+                      for(int i=0; i<150; i++){__asm__("nop");} \
                       GPPUD = 0; \
                       __GPCB(GPPUDCLK_ADDR, (x))
 //turn on a pull-down on GPIO pin x (see pg101 of the BCM2835 datasheet) (not completely verified)
+//requires c99 compilation
 #define GPIOPULLDN(x) GPPUD |= (1<<PUDDN); \
-                      for(i=0; i<150; i++){} \
+                      for(int i=0; i<150; i++){__asm__("nop");} \
                       __GPSB(GPPUDCLK_ADDR, (x)); \
-                      for(i=0; i<150; i++){} \
+                      for(int i=0; i<150; i++){__asm__("nop");} \
                       GPPUD = 0; \
                       __GPCB(GPPUDCLK_ADDR, (x))
 //turn off a pull-up/pull-down on GPIO pin x (see pg101 of the BCM2835 datasheet) (not completely verified)
+//requires c99 compilation
 #define GPIOPULLOF(x) GPPUD &= ~((1<<PUDUP) | (1<<PUDDN)); \
-                      for(i=0; i<150; i++){} \
+                      for(int i=0; i<150; i++){__asm__("nop");} \
                       __GPCB(GPPUDCLK_ADDR, (x)); \
-                      for(i=0; i<150; i++){} \
+                      for(int i=0; i<150; i++){__asm__("nop");} \
                       GPPUD = 0; \
                       __GPCB(GPPUDCLK_ADDR, (x))
 
