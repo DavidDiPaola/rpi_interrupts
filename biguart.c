@@ -152,6 +152,9 @@ static volatile int  uart_busy;
 
 void uart_handler ( void )
 {
+    //ACK TX FIFO interrupt
+    PL011_ICR |= (1<<PL011_ICR_TXIC);
+
     //if nothing is modifying the buffer or index
     if(!uart_busy){
         //if we can...
@@ -189,10 +192,11 @@ void iuartPuts(char *s)
     int i = 0;
 
     //wait until transmission is over
-    //while(!uart_done){}
     while(uart_buffer[0] != '\0'){}
     //take the uart
     uart_busy = 1;
+    //if our string is zero characters, the ISR will start at index 1 but won't see a \0, so put one in manually
+    uart_buffer[1] = '\0';
 
     //copy the string
     while((i < UART_MAXLEN) && (s[i] != '\0'))
@@ -206,13 +210,12 @@ void iuartPuts(char *s)
     uart_buffer[i] = '\0';
 
     //initialize the index
-    uart_idx = 0;
+    uart_idx = 1;
 
     //leave the uart
     uart_busy = 0;
     //start the transmission
     PL011_DR = uart_buffer[0];
-    //uartPutln(uart_buffer);
 }
 
 void iuartPutln(char *s)
