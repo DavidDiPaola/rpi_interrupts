@@ -71,17 +71,17 @@
         #define PL011_IFLS_TXIFLSEL_THREEQUARTERS 0b011
         #define PL011_IFLS_TXIFLSEL_SEVELEIGHTS   0b100
 #define PL011_IMSC   __IO(PL011_BASE_ADDR+0x38) //Interrupt Mask Set/Clear Register
-    #define PL011_IMSC_OEIM   10 //overrun error mask bit
-    #define PL011_IMSC_BEIN   9  //break error mask bit
-    #define PL011_IMSC_PEIM   8  //parity error mask bit
-    #define PL011_IMSC_FEIM   7  //framing error mask bit
-    #define PL011_IMSC_RTIM   6  //receive timeout mask bit
-    #define PL011_IMSC_TXIM   5  //transmit interrupt mask bit
-    #define PL011_IMSC_RXIM   4  //receive interrupt mask bit
-    #define PL011_IMSC_DSRMIM 3  //DSR interrupt mask bit
-    #define PL011_IMSC_DCDMIM 2  //DCD interrupt mask bit
-    #define PL011_IMSC_CTSMIM 1  //CTS interrupt mask bit
-    #define PL011_IMSC_RIMIM  0  //RI interrupt mask bit
+    #define PL011_IMSC_OEIM   10 //overrun error mask bit, if 1: this interrupt is enabled
+    #define PL011_IMSC_BEIN   9  //break error mask bit, if 1: this interrupt is enabled
+    #define PL011_IMSC_PEIM   8  //parity error mask bit, if 1: this interrupt is enabled
+    #define PL011_IMSC_FEIM   7  //framing error mask bit, if 1: this interrupt is enabled
+    #define PL011_IMSC_RTIM   6  //receive timeout mask bit, if 1: this interrupt is enabled
+    #define PL011_IMSC_TXIM   5  //transmit interrupt mask bit, if 1: this interrupt is enabled
+    #define PL011_IMSC_RXIM   4  //receive interrupt mask bit, if 1: this interrupt is enabled
+    #define PL011_IMSC_DSRMIM 3  //DSR interrupt mask bit, if 1: this interrupt is enabled
+    #define PL011_IMSC_DCDMIM 2  //DCD interrupt mask bit, if 1: this interrupt is enabled
+    #define PL011_IMSC_CTSMIM 1  //CTS interrupt mask bit, if 1: this interrupt is enabled
+    #define PL011_IMSC_RIMIM  0  //RI interrupt mask bit, if 1: this interrupt is enabled
 #define PL011_RIS    __IO(PL011_BASE_ADDR+0x3C) //Raw Interrupt Status Register
     //read only
     #define PL011_RIS_OERIS   10 //overrun error interrupt status
