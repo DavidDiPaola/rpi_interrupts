@@ -30,26 +30,19 @@ syscall kputc(device *devptr, uchar c)
     //get the UART's device pointer
     uartptr = &uarttab[devptr->minor];
 
-    //irmask = regptr->ier;       /* Save UART interrupt state.   */
     irmask = regptr->imsc;      /* Save UART interrupt state.   */
-    //regptr->ier = 0;            /* Disable UART interrupts.     */
     regptr->imsc = 0;           /* Disable UART interrupts.     */
 
-    do                          /* Wait for transmitter         */
+    do                          /* Wait for transmitter to finish */
     {
-        //status = regptr->lsr;
         status = regptr->fr;
     }
-    //while ((status & UART_LSR_TEMT) != UART_LSR_TEMT);
-    ////////while ((status & PL011_FR_TXFF) != 0);
-    while ((status & 0x20) != 0);
+    while ((status & PL011_FR_TXFF) != 0);
 
     /* Send character. */
-    //regptr->thr = c;
     regptr->dr = c;
     uartptr->cout++;
 
-    //regptr->ier = irmask;       /* Restore UART interrupts.     */
     regptr->imsc = irmask;      /* Restore UART interrupts.     */
     return c;
 }
@@ -68,21 +61,16 @@ syscall kgetc(device *devptr)
     //get a pointer to the UART's registers?
     regptr = (struct uart_csreg *)devptr->csr;
 
-    //irmask = regptr->ier;       /* Save UART interrupt state.   */
     irmask = regptr->imsc;      /* Save UART interrupt state.   */
-    //regptr->ier = 0;            /* Disable UART interrupts.     */
     regptr->imsc = 0;           /* Disable UART interrupts.     */
 
-    //while (0 == (regptr->lsr & UART_LSR_DR))
     while (0 != (regptr->fr & PL011_FR_RXFE))
     {                           /* Do Nothing */
     }
 
     /* read character from Receive Holding Register */
-    //c = regptr->rbr;
     c = regptr->dr;
 
-    //regptr->ier = irmask;       /* Restore UART interrupts.     */
     regptr->imsc = irmask;      /* Restore UART interrupts.     */
     return c;
 }
