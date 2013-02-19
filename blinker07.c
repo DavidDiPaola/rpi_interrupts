@@ -34,12 +34,50 @@ void led_toggle(void){
 
 
 /*
-    NOTE: this is not a universal VIC like one might expect! Each vector number
-    is tied to a specific device, so the handler registered to it *must* be the
-    handler for that device!
+    NOTE: this is not a real VIC like one might expect! Each vector number
+    is tied to a specific device which is represented as a bit in a status
+    register. Because of this, we have to check each bit of the status register
+    for a pending IRQ. Because of that, de-registering an interrupt doesn't
+    guarantee that the interrupt won't fire while the deregister function is
+    executing before it fully disables the interrupt.
+
+    Additionally, this interrupt controller also has a number of quirks. The
+    Linux source code for this device sheds some light on what these are:
+
+    Quirk 1: Shortcut interrupts don't set the bank 1/2 register pending bits
+
+             (The Basic Pending Register is supposed the be the first place we
+             look for an interrupt. It's a summary of the most common interrupt
+             bits. Because of this, it partially duplicates the bits in the
+             Interrupt Pending 1 & 2 Registers. It also has a few bits that say
+             if any bits are set in the Interrupt Pending 1 & 2 registers.
+             Therefore, it may seem a bit odd that this device won't set these
+             "look at Interrupt Pending 1 & 2" bits when devices that appear
+             in both the Basic Pending Register and an Interrupt Pending
+             Register assert an interrupt. This code doesn't use the Basic
+             Pending Register, so we avoid this altogether.)
+
+
+
+    Quirk 2: You can't mask the register 1/2 pending interrupts
+
+             (Not completely sure what this means. In the worst-case
+             scenario, we won't be able to disable certain IRQ sources
+             by writing to the Interrupt Disable Registers. That being
+             said, the deregister routine has successfully used the
+             Disable Registers because otherwise, we'd go into an
+             infinite IRQ loop (see comments in that routine for more
+             info).)
+
+
+
+    Quirk 3: Quirk 3: The shortcut interrupts can't be (un)masked in bank 0
+
+             (This code does not use the Basic Pending Register, so we
+             don't need to worry about this.)
 */
 
-typedef void(*vect_t)(void);
+typedef volatile void(*vect_t)(void);
 
 #define NULL_VECT (vect_t)0
 #define NUM_VECT 64
@@ -49,10 +87,16 @@ typedef void(*vect_t)(void);
 
 vect_t vectors[NUM_VECT];
 
+//interrupts should be disabled on the CPU level before calling this routine
 void vic_init(void)
 {
     int i;
 
+    //disable all IRQ sources first, just to be "safe"
+    INTERRUPT_DISABLEIRQ1 = 0xFFFFFFFF;
+    INTERRUPT_DISABLEIRQ2 = 0xFFFFFFFF;
+
+    //fill the vector table with "don't jump to me" values
     for(i=0; i<NUM_VECT; i++){
         vectors[i] = NULL_VECT;
     }
@@ -66,7 +110,7 @@ void vic_register(int vect_num, vect_t handler)
     {
         //write the new handler into the vector table first so that if we
         //  enable an IRQ that's currently asserted and thus have an interrupt,
-        //  we'll jump to a good address.
+        //  we'll already have a good address to jump to.
         vectors[vect_num] = handler;
 
         //enable the respective interrupt
@@ -95,8 +139,11 @@ void vic_deregister(int vect_num)
     if((vect_num >= 0) &&
        (vect_num < NUM_VECT))
     {
-        //disable IRQs for this device first. otherwise we might interrupt with a
-        //  NULL_VECT in the handler's address.
+        //disable IRQs for this device before NULL-ing the vector. otherwise,
+        //  we might interrupt with a NULL_VECT in the handler's address.
+        //  because the interrupt wasn't ACKed because we never went to the
+        //  handler routine, the device will continue to assert its IRQ line,
+        //  which will put us in a never-ending IRQ loop.
         if(vect_num < 32)
         {
             INTERRUPT_DISABLEIRQ1 = (1<<vect_num); //zeroes are ignored, don't use |=
@@ -114,6 +161,11 @@ void vic_deregister(int vect_num)
 void c_irq_handler(void)
 //void vic_irq_handler(void)
 {
+    //If IRQs trigger while this handler is executing, we will probably miss
+    //  them. That's not the end of the world, because IRQs on the ARM are
+    //  level triggered. That means that the ARM will interrupt again after
+    //  we leave the IRQ handler, which will re-run this code allowing us to
+    //  service the new interrupt(s).
     unsigned int i, irqs;
 
     //handle all vectors in the first set of IRQs
@@ -188,7 +240,8 @@ int notmain ( void )
     vic_init();
     vic_register(VECT_SYSTIMERM1, systimer_handler);
     vic_register(VECT_PL011, uart_handler);
-    vic_deregister(VECT_SYSTIMERM1);
+    vic_deregister(VECT_SYSTIMERM1); //test deregistration. this line prevents the LED from blinking.
+    //vectors[VECT_SYSTIMERM1] = NULL_VECT; //if the systimer M1 is registered, uncomment this line to cause a never-ending IRQ loop.
 
     //initialize hardware
     systimer_init(1000000); //go off once a second
