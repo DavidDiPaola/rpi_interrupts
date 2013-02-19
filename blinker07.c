@@ -14,7 +14,8 @@
 #include "systimer.h"
 #include "stdint.h"
 
-#define ARMBASE 0x8000
+//#define ARMBASE 0x8000
+#define ARMBASE 0x10000
 
 #define I_ON() AUX_MU_IER_REG |= (1<<1)
 #define I_OFF() AUX_MU_IER_REG &= ~(1<<1)
@@ -30,9 +31,105 @@ void led_toggle(void){
     }
 }
 
-unsigned long long int irq1s;
-unsigned long long int irq2s;
 
+
+
+/*
+    NOTE: this is not a universal VIC like one might expect! Each vector number
+    is tied to a specific device, so the handler registered to it *must* be the
+    handler for that device!
+*/
+
+typedef void(*vect_t)(void);
+
+#define NULL_VECT (vect_t)0
+#define NUM_VECT 64
+//see the table page 113 of the BCM2835 Arm Peripherals datasheet for vector numbers
+#define VECT_SYSTIMERM1 1  //triggered when the system timer matches the C1 register
+#define VECT_PL011      57 //triggered when the PL011 asserts IRQ status
+
+vect_t vectors[NUM_VECT];
+
+void vic_init(void)
+{
+    int i;
+
+    for(i=0; i<NUM_VECT; i++){
+        vectors[i] = NULL_VECT;
+    }
+}
+
+void vic_register(int vect_num, vect_t handler)
+{
+    //if the index is valid
+    if((vect_num >= 0) &&
+       (vect_num < NUM_VECT))
+    {
+        //write the new handler into the vector table
+        vectors[vect_num] = handler;
+
+        //enable the respective interrupt
+        if(vect_num < 32)
+        {
+            INTERRUPT_ENABLEIRQ1 |= (1<<vect_num);
+        }
+        else
+        {
+            INTERRUPT_ENABLEIRQ2 |= (1<<(vect_num-1));
+        }
+    }
+}
+
+void vic_deregister(int vect_num)
+{
+    if((vect_num >= 0) &&
+       (vect_num < NUM_VECT))
+    {
+        vectors[vect_num] = NULL_VECT;
+    }
+}
+
+void c_irq_handler(void)
+//void vic_irq_handler(void)
+{
+    unsigned int i, irqs;
+
+    //handle all vectors in the first set of IRQs
+    irqs = INTERRUPT_IRQPEND1;
+    for(i=0; i<32; i++)
+    {
+        //if the current bit is set and there's a handler
+        if((irqs & 1) &&
+           (vectors[i] != NULL_VECT))
+        {
+            //call the handler
+            vectors[i]();
+        }
+
+        //on to the next one
+        irqs = (irqs>>1);
+    }
+
+    //handle all vectors in the first set of IRQs
+    irqs = INTERRUPT_IRQPEND2;
+    for(i=32; i<64; i++)
+    {
+        //if the current bit is set and there's a handler
+        if((irqs & 1) &&
+           (vectors[i] != NULL_VECT))
+        {
+            //call the handler
+            vectors[i]();
+        }
+
+        //on to the next one
+        irqs = (irqs>>1);
+    }
+}
+
+
+
+/*
 void c_irq_handler ( void )
 {
     disable_irq();
@@ -55,6 +152,7 @@ void c_irq_handler ( void )
     }
     enable_irq();
 }
+*/
 
 int notmain ( void )
 {
@@ -64,9 +162,12 @@ int notmain ( void )
     GPIOMODE(16, FSEL_OUTPUT); //led output
     GPIOSET(16); //led off
 
-    //rely on the interrupt to measure time.
-    ra = systimer_get();
+    //initialize interrupts
+    vic_init();
+    vic_register(VECT_SYSTIMERM1, systimer_handler);
+    vic_register(VECT_PL011, uart_handler);
 
+    //initialize hardware
     systimer_init(1000000); //go off once a second
     uartInit();
     uartPutln("Booted!");
@@ -125,6 +226,11 @@ int notmain ( void )
     //PL011_DR = '?';
     for(;;){
         iuartPutln("Interrupts!");
+        if(ra != (rb = systimer_get()))
+        {
+            ra = rb;
+            led_toggle();
+        }
     }
 
     //test system timer AND UART
