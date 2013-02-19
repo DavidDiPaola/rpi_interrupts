@@ -188,6 +188,7 @@ int notmain ( void )
     vic_init();
     vic_register(VECT_SYSTIMERM1, systimer_handler);
     vic_register(VECT_PL011, uart_handler);
+    vic_deregister(VECT_SYSTIMERM1);
 
     //initialize hardware
     systimer_init(1000000); //go off once a second
