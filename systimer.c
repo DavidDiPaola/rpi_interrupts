@@ -16,8 +16,6 @@ void systimer_init ( unsigned int ivl )
     SYSTIMER_C1 = SYSTIMER_CLO + interval;
     //clear any interrupts
     SYSTIMER_CS |= (1<<M1);
-    //enable the interrupt for the timer
-    INTERRUPT_ENABLEIRQ |= (1<<IRQSYSTIMERC1);
 }
 
 void systimer_handler ( void )
