@@ -14,7 +14,6 @@
 #include "systimer.h"
 #include "stdint.h"
 
-//#define ARMBASE 0x8000
 #define ARMBASE 0x10000
 
 #define I_ON() AUX_MU_IER_REG |= (1<<1)
@@ -65,26 +64,49 @@ void vic_register(int vect_num, vect_t handler)
     if((vect_num >= 0) &&
        (vect_num < NUM_VECT))
     {
-        //write the new handler into the vector table
+        //write the new handler into the vector table first so that if we
+        //  enable an IRQ that's currently asserted and thus have an interrupt,
+        //  we'll jump to a good address.
         vectors[vect_num] = handler;
 
         //enable the respective interrupt
         if(vect_num < 32)
         {
-            INTERRUPT_ENABLEIRQ1 |= (1<<vect_num);
+            //only 1 bits are recognized when writing to the (en/dis)able regs.
+            //  using |= here could be problematic since it would likely be
+            //  implemented as multiple instructions: at least a read, an or,
+            //  and a write. if we interrupted _after_ the read instruction or
+            //  the or instruction, and disabled certain bits in the IRQ
+            //  routine, the |= would write back the old state of the enable
+            //  bits. This would effectively be re-enabling interrupts that we
+            //  wanted disabled.
+            INTERRUPT_ENABLEIRQ1 = (1<<vect_num); //zeroes are ignored, don't use |=
         }
         else
         {
-            INTERRUPT_ENABLEIRQ2 |= (1<<(vect_num-1));
+            INTERRUPT_ENABLEIRQ2 = (1<<(vect_num-32)); //zeroes are ignored, don't use |=
         }
     }
 }
 
 void vic_deregister(int vect_num)
 {
+    //if the index is valid
     if((vect_num >= 0) &&
        (vect_num < NUM_VECT))
     {
+        //disable IRQs for this device first. otherwise we might interrupt with a
+        //  NULL_VECT in the handler's address.
+        if(vect_num < 32)
+        {
+            INTERRUPT_DISABLEIRQ1 = (1<<vect_num); //zeroes are ignored, don't use |=
+        }
+        else
+        {
+            INTERRUPT_DISABLEIRQ2 = (1<<(vect_num-32)); //zeroes are ignored, don't use |=
+        }
+
+        //write the new handler
         vectors[vect_num] = NULL_VECT;
     }
 }
@@ -99,8 +121,8 @@ void c_irq_handler(void)
     for(i=0; i<32; i++)
     {
         //if the current bit is set and there's a handler
-        if((irqs & 1) &&
-           (vectors[i] != NULL_VECT))
+        if((irqs & 1) && //if this IRQ has a pending interrupt
+           (vectors[i] != NULL_VECT)) //just in case we interrupted a registration or deregistration
         {
             //call the handler
             vectors[i]();
@@ -115,8 +137,8 @@ void c_irq_handler(void)
     for(i=32; i<64; i++)
     {
         //if the current bit is set and there's a handler
-        if((irqs & 1) &&
-           (vectors[i] != NULL_VECT))
+        if((irqs & 1) && //if this IRQ has a pending interrupt
+           (vectors[i] != NULL_VECT)) //just in case we interrupted a registration or deregistration
         {
             //call the handler
             vectors[i]();
@@ -160,7 +182,7 @@ int notmain ( void )
 
     //make gpio pin tied to the led an output
     GPIOMODE(16, FSEL_OUTPUT); //led output
-    GPIOSET(16); //led off
+    GPIOCLR(16); //led on
 
     //initialize interrupts
     vic_init();
