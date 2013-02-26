@@ -57,8 +57,8 @@ int notmain ( void )
 
     //test interrupts fully
     GPIOSET(16); //led off
-    enable_cpu_irq();
-    //enable(); //wish this worked...
+    enable(); //enable interrupts
+    disable(); //disable interrupts (DOESN'T WORK)
     iuartInit();
     for(;;){
         iuartPutln("Interrupts!");
