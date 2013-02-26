@@ -13,7 +13,11 @@ typedef volatile void(*vect_t)(void);
 
 void vic_init(void);
 
+void vic_enable(int vect_num);
+
 void vic_register(int vect_num, vect_t handler);
+
+void vic_disable(int vect_num);
 
 void vic_deregister(int vect_num);
 

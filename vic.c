@@ -75,7 +75,11 @@ void vic_register(int vect_num, vect_t handler)
         //  enable an IRQ that's currently asserted and thus have an interrupt,
         //  we'll already have a good address to jump to.
         vectors[vect_num] = handler;
+    }
+}
 
+void vic_enable(int vect_num)
+{
         //enable the respective interrupt
         if(vect_num < 32)
         {
@@ -93,15 +97,10 @@ void vic_register(int vect_num, vect_t handler)
         {
             INTERRUPT_ENABLEIRQ2 = (1<<(vect_num-32)); //zeroes are ignored, don't use |=
         }
-    }
 }
 
-void vic_deregister(int vect_num)
+void vic_disable(int vect_num)
 {
-    //if the index is valid
-    if((vect_num >= 0) &&
-       (vect_num < NUM_VECT))
-    {
         //disable IRQs for this device before NULL-ing the vector. otherwise,
         //  we might interrupt with a NULL_VECT in the handler's address.
         //  because the interrupt wasn't ACKed because we never went to the
@@ -115,6 +114,19 @@ void vic_deregister(int vect_num)
         {
             INTERRUPT_DISABLEIRQ2 = (1<<(vect_num-32)); //zeroes are ignored, don't use |=
         }
+}
+
+void vic_deregister(int vect_num)
+{
+    //if the index is valid
+    if((vect_num >= 0) &&
+       (vect_num < NUM_VECT))
+    {
+        //disable IRQs for this device before NULL-ing the vector. otherwise,
+        //  we might interrupt with a NULL_VECT in the handler's address.
+        //  because the interrupt wasn't ACKed because we never went to the
+        //  handler routine, the device will continue to assert its IRQ line,
+        //  which will put us in a never-ending IRQ loop.
 
         //write the new handler
         vectors[vect_num] = NULL_VECT;

@@ -45,8 +45,8 @@ int notmain ( void )
     vic_init();
     vic_register(VECT_SYSTIMERM1, systimer_handler);
     vic_register(VECT_PL011, uart_handler);
-    vic_deregister(VECT_SYSTIMERM1); //test deregistration. this line prevents the LED from blinking.
-    //vectors[VECT_SYSTIMERM1] = NULL_VECT; //if the systimer M1 is registered, uncomment this line to cause a never-ending IRQ loop.
+    vic_enable(VECT_PL011);
+    vic_enable(VECT_SYSTIMERM1);
 
     //initialize hardware
     systimer_init(1000000); //go off once a second
@@ -102,11 +102,13 @@ int notmain ( void )
 
     //test interrupts fully
     GPIOSET(16); //led off
-    iuartInit();
     enable_irq();
+    iuartInit();
     //PL011_DR = '?';
     for(;;){
         iuartPutln("Interrupts!");
+        vic_enable(VECT_SYSTIMERM1);
+        vic_disable(VECT_SYSTIMERM1); //test deregistration. this line prevents the LED from blinking.
         if(ra != (rb = systimer_get()))
         {
             ra = rb;
