@@ -73,6 +73,7 @@ irqmask vic_get_irqmask(void)
 
     ret.lower = INTERRUPT_ENABLEIRQ1;
     ret.upper = INTERRUPT_ENABLEIRQ2;
+    ret.irqen = vic_interrupts_disabled();
 
     return ret;
 }
@@ -86,6 +87,16 @@ void vic_set_irqmask( irqmask im )
     //disable disabled IRQs
     INTERRUPT_DISABLEIRQ1 = ~(im.lower);
     INTERRUPT_DISABLEIRQ2 = ~(im.upper);
+
+    //restore interrupt state
+    if(im.irqen == 0) //if interrupts were enabled
+    {
+        vic_enable_interrupts();
+    }
+    else //if interrupts were disabled
+    {
+        vic_disable_interrupts();
+    }
 }
 
 void vic_enable_irq(int vect_num)

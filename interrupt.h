@@ -58,6 +58,7 @@ typedef void (__attribute__((interrupt("IRQ"))) *irq_handler)( void );
 typedef struct {
     uint32_t lower;
     uint32_t upper;
+    uint32_t irqen;
 } irqmask;
 
 /* Interrupt enabling function prototypes */
