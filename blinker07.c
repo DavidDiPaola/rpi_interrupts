@@ -17,8 +17,8 @@
 
 #define ARMBASE 0x10000
 
-extern void enable_irq ( void );
-extern void disable_irq ( void );
+extern void enable_cpu_irq ( void );
+extern void disable_cpu_irq ( void );
 
 void led_toggle(void){
     if(GPIOREAD(16)){
@@ -35,7 +35,7 @@ void c_irq_handler ( void )
 
 int notmain ( void )
 {
-    unsigned int ra, rb, rc;
+    unsigned int ra, rb;
 
     //make gpio pin tied to the led an output
     GPIOMODE(16, FSEL_OUTPUT); //led output
@@ -43,10 +43,22 @@ int notmain ( void )
 
     //initialize interrupts
     vic_init();
-    vic_register(VECT_SYSTIMERM1, systimer_handler);
-    vic_register(VECT_PL011, uart_handler);
+
+    //register handlers and enable IRQs
+    /*
+    vic_register_irq(VECT_SYSTIMERM1, systimer_handler);
+    vic_register_irq(VECT_PL011, uart_handler);
     vic_enable(VECT_PL011);
     vic_enable(VECT_SYSTIMERM1);
+    */
+    
+    register_irq(VECT_SYSTIMERM1, systimer_handler);
+    register_irq(VECT_PL011, uart_handler);
+    enable_irq(VECT_PL011);
+    enable_irq(VECT_SYSTIMERM1);
+    
+    enable_cpu_irq();
+    
 
     //initialize hardware
     systimer_init(1000000); //go off once a second
@@ -102,13 +114,13 @@ int notmain ( void )
 
     //test interrupts fully
     GPIOSET(16); //led off
-    enable_irq();
+    //enable(); //wish this worked...
     iuartInit();
     //PL011_DR = '?';
     for(;;){
         iuartPutln("Interrupts!");
-        vic_enable(VECT_SYSTIMERM1);
-        vic_disable(VECT_SYSTIMERM1); //test deregistration. this line prevents the LED from blinking.
+        //vic_enable_irq(VECT_SYSTIMERM1);
+        //vic_disable_irq(VECT_SYSTIMERM1); //test deregistration. this line prevents the LED from blinking.
         if(ra != (rb = systimer_get()))
         {
             ra = rb;
