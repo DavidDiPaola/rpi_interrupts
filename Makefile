@@ -29,11 +29,14 @@ systimer.o : systimer.c
 biguart.o : biguart.c
 	$(ARMGNU)-gcc $(COPS) -c biguart.c -o biguart.o
 
+vic.o : vic.c
+	$(ARMGNU)-gcc $(COPS) -c vic.c -o vic.o
+
 blinker07.o : blinker07.c
 	$(ARMGNU)-gcc $(COPS) -c blinker07.c -o blinker07.o
 
-blinker07.elf : memmap vectors.o blinker07.o biguart.o systimer.o
-	$(ARMGNU)-ld vectors.o blinker07.o biguart.o systimer.o -T memmap -o blinker07.elf
+blinker07.elf : memmap vectors.o blinker07.o biguart.o systimer.o vic.o
+	$(ARMGNU)-ld vectors.o blinker07.o biguart.o systimer.o vic.o -T memmap -o blinker07.elf
 	$(ARMGNU)-objdump -D blinker07.elf > blinker07.list
 
 blinker07.bin : blinker07.elf
