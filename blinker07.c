@@ -36,6 +36,7 @@ void c_irq_handler ( void )
 int notmain ( void )
 {
     unsigned int ra, rb;
+    irqmask im;
 
     //make gpio pin tied to the led an output
     GPIOMODE(16, FSEL_OUTPUT); //led output
@@ -58,7 +59,10 @@ int notmain ( void )
     //test interrupts fully
     GPIOSET(16); //led off
     enable(); //enable interrupts
-    disable(); //disable interrupts (DOESN'T WORK)
+    im = disable(); //disable interrupts, keep previous state
+    disable_irq(VECT_PL011); //disable UART interrupts, these should be restored later
+    disable_irq(VECT_SYSTIMERM1); //disable System Timer interrupts, these should be restored later
+    restore(im); //restore enabled statuses
     iuartInit();
     for(;;){
         iuartPutln("Interrupts!");
