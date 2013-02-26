@@ -14,33 +14,42 @@
 
 void vic_init(void);
 
-inline int vic_enable_interrupts( void )
+static inline int vic_interrupts_disabled( void )
 {
     int ret;
 
-
     // Check if interrupts are already enabled. If so, return 0
-
     __asm__("mrs r0, cpsr;"
             "and %[ret], r0, #0x80;"
-            "bic r0, r0, #0x80;"
-            "msr cpsr_c, r0" 
-            : [ret]"=r" (ret) : : "r0");
+            : [ret]"=r" (ret)
+            :
+            : "r0");
 
     return ret;
 }
 
-inline int vic_disable_interrupts(void)
+static inline int vic_enable_interrupts( void )
 {
     int ret;
 
+    ret = vic_interrupts_disabled();
+
+    __asm__("mrs r0,cpsr;"
+            "bic r0,r0,#0x80;"
+            "msr cpsr_c,r0");
+
+    return ret;
+}
+
+static inline int vic_disable_interrupts(void)
+{
+    int ret;
+
+    ret = vic_interrupts_disabled();
+
     __asm__("mrs r0, cpsr; "
-            "and %[ret], r0, #0x80;"
-            "orr r0, r0, #0x80;" 
-            "msr cpsr_c, r0" 
-	    : [ret]"=r" (ret) 
-	    : 
-	    : "r0");
+            "orr r0, r0, #0x80;"
+            "msr cpsr_c, r0");
 
     return ret;
 }
