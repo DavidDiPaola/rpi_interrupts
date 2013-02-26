@@ -45,10 +45,12 @@
              don't need to worry about this.)
 */
 
-#define NULL_VECT (vect_t)0
+//#define NULL_VECT (vect_t)0
+#define NULL_VECT (irq_handler)0
 #define NUM_VECT 64
 
-static vect_t vectors[NUM_VECT];
+//static vect_t vectors[NUM_VECT];
+static irq_handler vectors[NUM_VECT];
 
 //interrupts should be disabled on the CPU level before calling this routine
 void vic_init(void)
@@ -65,20 +67,28 @@ void vic_init(void)
     }
 }
 
-void vic_register(int vect_num, vect_t handler)
+irqmask vic_get_irqmask(void)
 {
-    //if the index is valid
-    if((vect_num >= 0) &&
-       (vect_num < NUM_VECT))
-    {
-        //write the new handler into the vector table first so that if we
-        //  enable an IRQ that's currently asserted and thus have an interrupt,
-        //  we'll already have a good address to jump to.
-        vectors[vect_num] = handler;
-    }
+    irqmask ret;
+
+    ret.lower = INTERRUPT_ENABLEIRQ1;
+    ret.upper = INTERRUPT_ENABLEIRQ2;
+
+    return ret;
 }
 
-void vic_enable(int vect_num)
+void vic_set_irqmask( irqmask im )
+{
+    //enable enabled IRQs
+    INTERRUPT_ENABLEIRQ1 = im.lower;
+    INTERRUPT_ENABLEIRQ2 = im.upper;
+
+    //disable disabled IRQs
+    INTERRUPT_DISABLEIRQ1 = ~(im.lower);
+    INTERRUPT_DISABLEIRQ2 = ~(im.upper);
+}
+
+void vic_enable_irq(int vect_num)
 {
         //enable the respective interrupt
         if(vect_num < 32)
@@ -99,7 +109,7 @@ void vic_enable(int vect_num)
         }
 }
 
-void vic_disable(int vect_num)
+void vic_disable_irq(int vect_num)
 {
         //disable IRQs for this device before NULL-ing the vector. otherwise,
         //  we might interrupt with a NULL_VECT in the handler's address.
@@ -116,7 +126,21 @@ void vic_disable(int vect_num)
         }
 }
 
-void vic_deregister(int vect_num)
+//void vic_register_irq(int vect_num, vect_t handler)
+void vic_register_irq(int vect_num, irq_handler handler)
+{
+    //if the index is valid
+    if((vect_num >= 0) &&
+       (vect_num < NUM_VECT))
+    {
+        //write the new handler into the vector table first so that if we
+        //  enable an IRQ that's currently asserted and thus have an interrupt,
+        //  we'll already have a good address to jump to.
+        vectors[vect_num] = handler;
+    }
+}
+
+void vic_deregister_irq(int vect_num)
 {
     //if the index is valid
     if((vect_num >= 0) &&
